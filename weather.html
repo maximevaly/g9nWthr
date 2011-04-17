@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8' />
+  	<title>HTML5 Demo: geolocation</title>
+  <style>
+    article, aside, figure, footer, header, hgroup, 
+    menu, nav, section { display: block; }
+    * {
+      margin: 0px;
+      padding: 0px;
+    }
+    body {
+      color: #000000;
+      text-align: center;
+    }
+    #geoposition {
+    }
+    #weather {
+      background-color: #FFDB85;
+      min-height: 300px;
+    }
+    #location {
+      background-color: #000000;
+      color: #ffffff;
+      font-size: 20px;
+      padding: 10px 0px;
+      text-align: center;
+      width: 100%;
+    }
+    #photo {
+      margin: 20px;
+    }
+  </style>
+  </head>
+  <body>
+    <section id="geoposition">
+      <header>
+	    </header>
+
+	    <article id="weather">
+	    </article>
+	    
+	    <article id="location">
+	        <p>Finding your location: <span id="status">checking...</span></p>
+	    </article>
+	    
+	    
+	    <script>
+	    
+// We can't use Yahoo! Weather API directly because of Access-Control-Allow-Origin
+// http://developer.yahoo.com/weather/
+// https://developer.mozilla.org/en/http_access_control
+// So we use a php proxy 
+// http://developer.yahoo.com/javascript/howto-proxy.html#phpproxy
+
+// Yahoo Geoplanet and WOEID retrieval
+// http://stackoverflow.com/questions/1822650/yahoo-weather-api-woeid-retrieval
+// http://thinkvitamin.com/code/getting-started-with-yahoo-geoplanet-explorer/
+// http://www.geomojo.org/cgi-bin/reversegeocoder.cgi?long=-117.699444&lat=35.4775
+
+FLICKR_API_KEY='2a515c6436e75cdebcab1691636c3bf2';
+
+function load(yql,cb){
+  var src = 'http://query.yahooapis.com/v1/public/yql?api_key='+FLICKR_API_KEY+'&q='+
+            encodeURIComponent(yql) + '&format=json&callback=' + cb + '&'+
+            'env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
+  var head = document.getElementsByTagName('head')[0];
+  var s = document.createElement('script');
+  s.setAttribute('src',src);
+  head.appendChild(s);
+} // load
+function getDataForLatLon(lat,lon){
+  var yql = 'select * from geo.places where woeid in ('+
+            'select place.woeid from flickr.places where lat='+
+            lat + ' and  lon=' + lon + ')';
+  load(yql,'foundLocation');
+} // getDataForLatLon
+function foundLocation(o){
+  if(o.query.results){
+    var place = o.query.results.place;
+    var out = '<p>You are in ' + place.name + '!';
+          /*     which is a '+
+               place.placeTypeName.content + ' located at ('+
+               place.centroid.latitude + ',' + place.centroid.longitude+
+               ')</p>';*/
+    document.getElementById('location').innerHTML = out;
+    yahooWeather(place.woeid);
+  }
+} // foundLocation
+function yahooWeather(woeid) {
+  // We use a php proxy
+  // The web services request minus the domain name
+  var path = 'forecastrss?w=' + woeid + '&u=c';
+
+  //var url = 'http://weather.yahooapis.com/forecastrss?w=' + woeid;
+
+  // The full path to the PHP proxy
+  var url = 'http://localhost/proxy.php?yws_path=' + encodeURIComponent(path);
+ 
+  var requester = getRequester();
+  requester.open('GET', url, true);
+  requester.onreadystatechange = function() {
+      if (4 == requester.readyState && 200 == requester.status) {
+        var xmlDoc = requester.responseXML;
+        try {
+          // parsing the RSS feed http://www.jzferreira.com/blog/?p=21
+          var weather = 'http://xml.weather.yahoo.com/ns/rss/1.0';
+          var geo = 'http://www.w3.org/2003/01/geo/wgs84_pos#';
+          var yahoo = {};
+          
+          var location = xmlDoc.getElementsByTagNameNS(weather, 'location')[0];
+          yahoo['city'] = location.getAttribute('city');
+          yahoo['region'] = location.getAttribute('region');
+          yahoo['country'] = location.getAttribute('country');
+          
+          var condition = xmlDoc.getElementsByTagNameNS(weather, 'condition')[0];
+          yahoo['condition_text'] = condition.getAttribute('text');
+          yahoo['condition_code'] = condition.getAttribute('code');
+          yahoo['condition_temp'] = condition.getAttribute('temp');
+          yahoo['condition_date'] = condition.getAttribute('date');
+          
+          var forecasts = xmlDoc.getElementsByTagNameNS(weather, 'forecast');
+          for (var i = 0; i < forecasts.length ; i++) {
+            // TODO something
+          }
+          
+          // Add the nice bare HTML data returned by the API
+          var item = xmlDoc.getElementsByTagName("item")[0];
+          var description = item.getElementsByTagName('description')[0];
+          var req = document.createElement('p');
+          req.innerHTML = description.textContent;
+          var div = document.getElementById('weather');
+          div.appendChild(req);
+          
+          // flickr photo
+          var yql = 'select * from flickr.photos.search where ' +
+                    'has_geo="true" and text="' + yahoo['city'] + '";';
+          load(yql, 'flickrImg');
+  
+        } catch(e) {} 
+      }
+  };
+  requester.send(null);
+} // yahooWeather
+
+function flickrImg(o){
+  // http://developer.yahoo.com/flickr/
+  // http://kylerush.net/javascript/tutorial-flickr-api-javascript-jquery-ajax-json-build-detailed-photo-wall/
+  /*
+   "photo": [
+    {
+     "farm": "6",
+     "id": "5627141608",
+     "isfamily": "0",
+     "isfriend": "0",
+     "ispublic": "1",
+     "owner": "25937668@N08",
+     "secret": "8ae44e0580",
+     "server": "5227",
+     "title": "Bluebell Wood"
+    }, [...]
+  */
+  
+  if (o.query.results) {
+    var photo = o.query.results.photo[0];
+    var url = 'http://farm' + photo.farm + '.static.flickr.com/' + photo.server + '/' + photo.id + '_' + photo.secret + '.jpg'   
+    /*
+    if (photo.tags.tag != '') {
+      var tagsArr = new Array();
+      for (i = 0; i < photo.tags.length; i++) {
+        var tag = photo.tags[0];
+        tagsArr.push('<a href="http://www.flickr.com/photos/tags/' + tag._content + '">' + tag.raw + '</a>');      
+      }
+    }
+    var tags = tagsArr.join(', ');
+    */
+    var flickr = document.createElement('article');
+    flickr.id = 'fromflickr';
+    flickr.innerHTML = '<img id="photo" src="' + url + '" /' + '>';
+    var div = document.getElementById('geoposition');
+    div.appendChild(flickr);
+  }
+} // foundLocation
+
+
+// 'Bien développer pour le Web 2.0' II.5
+function getRequester() {
+  var result = false;
+  if (!result && 'undefined' != typeof XMLHttpRequest) {
+    try {
+      result = new XMLHttpRequest();
+    } catch (e) {
+      result = false;
+    }
+  }
+  return result;
+} // getRequester
+
+function success(position) {
+  var s = document.querySelector('#status');
+  if (s.className == 'success') {
+    // not sure why we're hitting this twice in FF, I think it's to do with a cached result coming back    
+    return;
+  }
+  //var msg = 'Your latitude is ' + position.coords.latitude + ' and your longitude is ' + position.coords.longitude;
+  //s.innerHTML = 'found you! ' + msg;
+  s.className = 'success';
+  getDataForLatLon(position.coords.latitude, position.coords.longitude);
+}
+
+function error(msg) {
+  // TODO handle errors
+  var s = document.querySelector('#status');
+  s.innerHTML = typeof msg == 'string' ? msg : 'failed';
+  s.className = 'fail';
+}
+
+// Does the navigator support geostuff?
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(success, error);
+} else {
+  error('not supported');
+}
+
+
+function safeHTML(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+  	  </script>
+    </section>
+  </body>
+</html>
+
