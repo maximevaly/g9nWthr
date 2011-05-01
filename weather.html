@@ -40,7 +40,7 @@
         width: 100%;
       }
       #photo {
-        margin: 20px;
+        margin: 30px 10px 0px;
       }
       #temperature {
         font-size: 140px;
@@ -104,11 +104,12 @@ function _readYahooLocation(o){
     var place = o.query.results.place;
     var out = '<p>You are in ' + place.name + '! (' + place.country.content + ')';
     document.getElementById('location').innerHTML = out;
-    fetchYahooWeather(place);
+    var units = (place.country.code == 'US' ? 'f' : 'c');
+    fetchYahooWeather(place, units);
   }
 } // _readYahooLocation
 
-function fetchYahooWeather(place) { // TODO support F & C
+function fetchYahooWeather(place, units) {
   var woeid = place.woeid;
   
   // We can't use Yahoo! Weather API directly because of Access-Control-Allow-Origin
@@ -117,7 +118,7 @@ function fetchYahooWeather(place) { // TODO support F & C
   // So we use a php proxy 
   // http://developer.yahoo.com/javascript/howto-proxy.html#phpproxy
   // The web services request minus the domain name
-  var path = 'forecastrss?w=' + woeid + '&u=c';
+  var path = 'forecastrss?w=' + woeid + '&u=' + units;
   // The full path to the PHP proxy
   var url = 'http://localhost/proxy.php?yws_path=' + encodeURIComponent(path);
   //var url = 'http://weather.yahooapis.com/forecastrss?w=' + woeid;
@@ -144,12 +145,15 @@ function _readYahooWeather() {
       yahoo['region'] = location.getAttribute('region');
       yahoo['country'] = location.getAttribute('country');
       
+      var units = xmlDoc.getElementsByTagNameNS(weather, 'units')[0];
+      yahoo['units_temp'] = units.getAttribute('temperature');
+      
       var condition = xmlDoc.getElementsByTagNameNS(weather, 'condition')[0];
       yahoo['condition_text'] = condition.getAttribute('text');
       yahoo['condition_code'] = condition.getAttribute('code');
       yahoo['condition_temp'] = condition.getAttribute('temp');
       yahoo['condition_date'] = condition.getAttribute('date');
-      
+            
       var forecasts = xmlDoc.getElementsByTagNameNS(weather, 'forecast');
       for (var i = 0; i < forecasts.length; i++) {
         // TODO something ?
@@ -157,27 +161,26 @@ function _readYahooWeather() {
       
       var divWeather = document.getElementById('weather');
       
+      var link = xmlDoc.getElementsByTagName('link')[0];
+      var weatherUrl = link.textContent
+      
       // Use a nice weather image from http://www.stardock.com/weather.asp
       var imagesPath = 'stardock_images/';
       var imageFile = imagesPath + w[yahoo['condition_code']] + '.png'
-      var html = '<img id="weatherPicto" src="' + imageFile + '" title="'+ 
-        yahoo['condition_text'] +'" ></img><span id="temperature">' + 
-        yahoo['condition_temp'] + '°C</span>';
+      var html = '<a href="' + weatherUrl + '">' +
+        '<img id="weatherPicto" src="' + imageFile + '" title="'+ yahoo['condition_text'] +'" ></img>' +
+        '</a><span id="temperature">' + 
+        yahoo['condition_temp'] + '°' + yahoo['units_temp'] + '</span>';
       var newP = createNode('p', null, null, html);
       divWeather.appendChild(newP);
-      
-      
-      // Add the bare HTML data returned by the Y! API
-      //var item = xmlDoc.getElementsByTagName('item')[0];
-      //var description = item.getElementsByTagName('description')[0];
-      //var elem = document.createElement('p');
-      //elem.innerHTML = description.textContent;
-      //divWeather.appendChild(elem);
-      
+            
       // Get a photo from Flickr
-      //var yql = 'select * from flickr.photos.search where ' +
-      //          'has_geo="true" and text="' + yahoo['city'] + '";';
-      ///loadYQL(yql, '_readFlickrImgResponse');
+      var lat = xmlDoc.getElementsByTagNameNS(geo, 'lat')[0].textContent;
+      var lon = xmlDoc.getElementsByTagNameNS(geo, 'long')[0].textContent;
+      var yql = 'select * from flickr.photos.search(0,200) where ' +
+                'has_geo="true" and lat="' + lat + '" and lon="' + lon + '" and radius="20";';
+                //'text="' + yahoo['city'] + '";';
+      loadYQL(yql, '_readFlickrImgResponse');
     } catch(e) {
       // err :/
     }  
@@ -222,28 +225,20 @@ function _readFlickrImgResponse(o){
   */
   
   if (o.query.results) {
-    var photo = o.query.results.photo[0];
+    var randomId = Math.floor(Math.random()*o.query.results.photo.length);
+    var photo = o.query.results.photo[randomId];
     var url = 'http://farm' + photo.farm + '.static.flickr.com/' + photo.server + '/' + photo.id + '_' + photo.secret + '.jpg'   
-    
     var flickr = document.createElement('article');
     flickr.id = 'fromflickr';
-    flickr.innerHTML = '<img id="photo" src="' + url + '" /' + '>';
+    flickr.innerHTML = '' +
+    '<a href="http://www.flickr.com/photos/' + photo.owner + '/' + photo.id + '">' +
+    '<img id="photo" src="' + url + '" /' + '></a>' +
+    '<p id="imgtitle">' + photo.title + '</p>';
     var div = document.getElementById('geoposition');
     div.appendChild(flickr);
   }
-  
-  // XXX unused right now
-  function readFlickrTags(photo) {
-    if (photo.tags.tag != '') {
-      var tagsArr = new Array();
-      for (i = 0; i < photo.tags.length; i++) {
-        var tag = photo.tags[0];
-        tagsArr.push('<a href="http://www.flickr.com/photos/tags/' + tag._content + '">' + tag.raw + '</a>');      
-      }
-    }
-    var tags = tagsArr.join(', ');
-  }
-} // foundLocation
+ 
+} // _readFlickrImgResponse
 
 function geoSuccess(position) {
   var s = document.querySelector('#status');
