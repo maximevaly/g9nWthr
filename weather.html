@@ -167,7 +167,7 @@ function _readYahooWeather() {
       // Use a nice weather image from http://www.stardock.com/weather.asp
       var imagesPath = 'stardock_images/';
       var imageFile = imagesPath + w[yahoo['condition_code']] + '.png'
-      var html = '<a href="' + weatherUrl + '">' +
+      var html = '<a href="' + weatherUrl + '?unit=' + yahoo['units_temp'] + '">' +
         '<img id="weatherPicto" src="' + imageFile + '" title="'+ yahoo['condition_text'] +'" ></img>' +
         '</a><span id="temperature">' + 
         yahoo['condition_temp'] + '°' + yahoo['units_temp'] + '</span>';
@@ -177,15 +177,24 @@ function _readYahooWeather() {
       // Get a photo from Flickr
       var lat = xmlDoc.getElementsByTagNameNS(geo, 'lat')[0].textContent;
       var lon = xmlDoc.getElementsByTagNameNS(geo, 'long')[0].textContent;
-      var yql = 'select * from flickr.photos.search(0,200) where ' +
-                'has_geo="true" and lat="' + lat + '" and lon="' + lon + '" and radius="20";';
-                //'text="' + yahoo['city'] + '";';
+      var yql = builFlickrYQLString(lat, lon);
       loadYQL(yql, '_readFlickrImgResponse');
     } catch(e) {
       // err :/
     }  
   }
 } // _readYahooWeather
+
+function builFlickrYQLString(lat, lon) {
+  var ONE_YEAR = 220147200;
+  var offset = ONE_YEAR * Math.floor(Math.random()*5);
+  var todayTimestamp = new Date().getTime();
+  var max_upload_date = todayTimestamp - offset;
+  // TODO something smarter
+  var yql = 'select * from flickr.photos.search(0,200) where ' +
+  'has_geo="true" and lat="' + lat + '" and lon="' + lon + '" and radius="20" and max_upload_date=' + max_upload_date + ';';
+  return yql;
+} // builFlickrYQLString
 
 // create a new node and return it
 function createNode(type, id, klass, innerHTML) {
