@@ -1,10 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="refresh" content="300" />
     
-  	<title>g9nWthr</title>
+    <style type="text/story">
+    <![CDATA[//><!--
+
+    Dear Reader,
+    
+    This simple HTML page is all about playing with some APIs and discovering 
+    cool new stuff brought to us by the magical HTML5. Namely we will first use
+    the HTML5 geolocation system (thanks to @rem) and try to find out from where
+    our visitor is browsing our page. Then, based on the information she will 
+    kindly allow us to gather, we will ask our friends at Yahoo! Geoplanet to
+    give use the matching WOEID. This info will then allow us to do all kind of 
+    cool stuff like get the current and upcoming weather (with Yahoo! Weather)
+    or fetch some nice geolocated picture from Flickr to display in our page.
+    
+    Coming later: we'll try to do without the HTML5-geo-magical-stuff and just 
+    do some IP-also-magical-sniffing.
+    
+    Sounds fun? Well it is!
+    Let's go!
+    
+    //--><!]]></style>
+    
+  	<meta charset="utf-8" />
+    <meta http-equiv="refresh" content="600" />
+    
+    <title>g9nWthr</title>
   	
   	<link href="http://fonts.googleapis.com/css?family=Kreon" rel="stylesheet" type="text/css">
   	
@@ -16,6 +39,7 @@
         padding: 0px;
       }
       * { font-family: 'Kreon', arial, serif; }
+      img { border: 0px; }
       body {
         background-color: #ffffff;
         color: #000000;
@@ -30,6 +54,30 @@
       #weatherPicto {
         bottom: -10px;
         position: relative;
+      }
+      #weather-wrapper {
+        margin: auto;
+        min-width: 200px;
+        max-width: 600px;
+      }
+      #weather-today {
+        float: left;
+      }
+      #weather-forecasts {
+        float: left;
+        margin-left: 30px;
+        text-align: center;
+      }
+      #weather-forecasts .forecasts {
+        margin-top: 20px;
+      }
+      #weather-forecasts .forecasts p {
+        float: left;
+        margin-top: 5px;
+      }
+      .forecast-picto {
+        float: left;
+        width: 50px;
       }
       #location {
         background-color: #000000;
@@ -55,6 +103,8 @@
       footer a:visited {
         color: #c9c9c9;
       }
+      
+      div.clear { clear: both };
     </style>
   </head>
   
@@ -68,25 +118,40 @@
 	    <article id="weather">
 	    </article>   
 	    
+      <noscript>
+        <div id="no-script">Damn! We can't do nothing nowadays without JavaScript mam'!</div>
+      </noscript>
+
     </section>
 
     <footer>
 	      <a href="https://github.com/maximevaly/g9nWthr">github</a>
     </footer>
-
+    
     <script>
 
-FLICKR_API_KEY='2a515c6436e75cdebcab1691636c3bf2'; // this app is named g9nWthr
+// Does the navigator support geostuff? (thanks @rem http://html5demos.com/geo)
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
+} else {
+  error('not supported');
+}
 
-function loadYQL(yql,cb){
-  var src = 'http://query.yahooapis.com/v1/public/yql?api_key=' + FLICKR_API_KEY +
-            '&q=' + encodeURIComponent(yql) + '&format=json&callback=' + cb + 
-            '&' + 'env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
-  var head = document.getElementsByTagName('head')[0];
-  var s = document.createElement('script');
-  s.setAttribute('src',src);
-  head.appendChild(s);
-} // loadYQL
+function geoSuccess(position) {
+  var s = document.querySelector('#status');
+  if (s.className == 'success') {
+    // not sure why we're hitting this twice in FF, I think it's to do with a cached result coming back    
+    return;
+  }
+  s.className = 'success';
+  fetchYahooLocation(position.coords.latitude, position.coords.longitude);
+}
+function geoError(msg) {
+  // TODO handle errors
+  var s = document.querySelector('#status');
+  s.innerHTML = typeof msg == 'string' ? msg : 'failed';
+  s.className = 'fail';
+}
 
 function fetchYahooLocation(lat, lon){
   // Yahoo Geoplanet and WOEID retrieval
@@ -115,20 +180,19 @@ function fetchYahooWeather(place, units) {
   // We can't use Yahoo! Weather API directly because of Access-Control-Allow-Origin
   // http://developer.yahoo.com/weather/
   // https://developer.mozilla.org/en/http_access_control
-  // So we use a php proxy 
+  // So we use a PHP proxy 
   // http://developer.yahoo.com/javascript/howto-proxy.html#phpproxy
   // The web services request minus the domain name
   var path = 'forecastrss?w=' + woeid + '&u=' + units;
   // The full path to the PHP proxy
-  var url = 'http://localhost/proxy.php?yws_path=' + encodeURIComponent(path);
-  //var url = 'http://weather.yahooapis.com/forecastrss?w=' + woeid;
-
+  var url = getProxyURL() + '?yws_path=' + encodeURIComponent(path);
+  
   var requester = getRequester();
   requester.open('GET', url, true);
   requester.onreadystatechange = _readYahooWeather;
   requester.send(null);
-} // fetchYahooWeather
 
+} // fetchYahooWeather
 
 function _readYahooWeather() {
   var requester = this;
@@ -153,11 +217,6 @@ function _readYahooWeather() {
       yahoo['condition_code'] = condition.getAttribute('code');
       yahoo['condition_temp'] = condition.getAttribute('temp');
       yahoo['condition_date'] = condition.getAttribute('date');
-            
-      var forecasts = xmlDoc.getElementsByTagNameNS(weather, 'forecast');
-      for (var i = 0; i < forecasts.length; i++) {
-        // TODO something ?
-      }
       
       var divWeather = document.getElementById('weather');
       
@@ -166,14 +225,44 @@ function _readYahooWeather() {
       
       // Use a nice weather image from http://www.stardock.com/weather.asp
       var imagesPath = 'stardock_images/';
+imagesPath = 'http://oneway.im/wthr.it/stardock_images/'; // FIXME PB with my local server
+      
       var imageFile = imagesPath + w[yahoo['condition_code']] + '.png'
-      var html = '<a href="' + weatherUrl + '?unit=' + yahoo['units_temp'] + '">' +
-        '<img id="weatherPicto" src="' + imageFile + '" title="'+ yahoo['condition_text'] +'" ></img>' +
-        '</a><span id="temperature">' + 
-        yahoo['condition_temp'] + '°' + yahoo['units_temp'] + '</span>';
-      var newP = createNode('p', null, null, html);
+      var html = '<div id="weather-today">' +
+        '<a href="' + weatherUrl + '?unit=' + yahoo['units_temp'] + '">' +
+        ' <img id="weatherPicto" src="' + imageFile + '" title="'+ yahoo['condition_text'] +'" ></img>' +
+        '</a><span id="temperature">' + yahoo['condition_temp'] + '°' + yahoo['units_temp'] + '</span>' + 
+        '</div>';
+
+      // get weather for the 2 upcoming days
+      var forecasts = xmlDoc.getElementsByTagNameNS(weather, 'forecast');
+      if (forecasts.length > 0) {
+        var html = html + '<div id="weather-forecasts">'
+        var yahoo_forecast = [];
+        for (var i = 0; i < forecasts.length; i++) {
+          var day = forecasts[i].getAttribute('day');
+          var date = forecasts[i].getAttribute('date');
+          var low = forecasts[i].getAttribute('low');
+          var high = forecasts[i].getAttribute('high');
+          var text = forecasts[i].getAttribute('text');
+          var code = forecasts[i].getAttribute('code');
+          var imageFile = imagesPath + w[code] + '.png'
+          html += '<div id="' + day + '" class="forecasts">'+
+          ' <img class="forecast-picto" src="' + imageFile + '" title="'+ text +'" ></img>' +
+            '<p>' + day + ', ' + date + ' <br> ' + low + '°' + yahoo['units_temp'] + ' / ' + high + '°' + yahoo['units_temp'] + '</p>' + '<div class="clear"></div>' +
+          '</div>';
+          if (i == 2) {
+            break;
+          }
+        }
+        html = html + '</div>';
+      }
+      
+      html = html + '<div class="clear"></div>';
+      
+      var newP = createNode('div', 'weather-wrapper', null, html);
       divWeather.appendChild(newP);
-            
+      
       // Get a photo from Flickr
       var lat = xmlDoc.getElementsByTagNameNS(geo, 'lat')[0].textContent;
       var lon = xmlDoc.getElementsByTagNameNS(geo, 'long')[0].textContent;
@@ -201,13 +290,12 @@ function createNode(type, id, klass, innerHTML) {
   if (type == undefined || type == null || type == '') {
     return null;
   }
-  
   var node = document.createElement(type);
   if (id != undefined && id != null && id != '') {
-    node.attr('id', id);
+    node.setAttribute('id', id);
   }
   if (klass != undefined && klass != null && klass != '') {
-    node.attr('class', klass);
+    node.setAttribute('class', klass);
   }
   if (innerHTML != undefined && innerHTML != null && innerHTML != '') {
     node.innerHTML = innerHTML;
@@ -232,7 +320,6 @@ function _readFlickrImgResponse(o){
      "title": "Bluebell Wood"
     }, [...]
   */
-  
   if (o.query.results) {
     var randomId = Math.floor(Math.random()*o.query.results.photo.length);
     var photo = o.query.results.photo[randomId];
@@ -246,35 +333,30 @@ function _readFlickrImgResponse(o){
     var div = document.getElementById('geoposition');
     div.appendChild(flickr);
   }
- 
 } // _readFlickrImgResponse
 
-function geoSuccess(position) {
-  var s = document.querySelector('#status');
-  if (s.className == 'success') {
-    // not sure why we're hitting this twice in FF, I think it's to do with a cached result coming back    
-    return;
-  }
-  s.className = 'success';
-  fetchYahooLocation(position.coords.latitude, position.coords.longitude);
-}
-function geoError(msg) {
-  // TODO handle errors
-  var s = document.querySelector('#status');
-  s.innerHTML = typeof msg == 'string' ? msg : 'failed';
-  s.className = 'fail';
-}
 
-// Does the navigator support geostuff?
-// thanks @rem http://html5demos.com/geo
-if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
-} else {
-  error('not supported');
+//
+// THERE BE THE UTILITY STUFF
+//
+
+FLICKR_API_KEY='2a515c6436e75cdebcab1691636c3bf2'; // this app is named g9nWthr
+
+function loadYQL(yql, cb){
+  var src = 'http://query.yahooapis.com/v1/public/yql?api_key=' + FLICKR_API_KEY +
+            '&q=' + encodeURIComponent(yql) + '&format=json&callback=' + cb + 
+            '&' + 'env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
+  var head = document.getElementsByTagName('head')[0];
+  var s = document.createElement('script');
+  s.setAttribute('src',src);
+  head.appendChild(s);
+} // loadYQL
+
+function getProxyURL() {
+  // can be http://localhost/weather/index.html or http://localhost/weather/index or http://localhost/weather/
+  var pagePath = location.href.substring(0, location.href.lastIndexOf("/")+1);
+  return pagePath + 'proxy.php';
 }
-
-
-// utils
 
 // 'Bien développer pour le Web 2.0' II.5
 function getRequester() {
