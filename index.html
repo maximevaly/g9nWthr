@@ -147,7 +147,7 @@ function geoSuccess(position) {
     return;
   }
   statusSpan.className = 'success';
-  statusSpan.firstChild.nodeValue = 'Almost ound...';
+  statusSpan.firstChild.nodeValue = 'Almost found...';
   fetchYahooLocation(position.coords.latitude, position.coords.longitude);
   // BROKEN see http://developer.yahoo.com/yql/guide/yql-code-examples.html#yql_javascript
   // see also http://stackoverflow.com/questions/1176668/how-to-use-yql-to-retrieve-web-results
