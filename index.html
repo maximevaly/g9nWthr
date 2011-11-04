@@ -106,6 +106,8 @@
       
       div.clear { clear: both };
     </style>
+
+    <script type="text/javascript" src="gga.js"></script>
   </head>
   
   <body>
@@ -116,7 +118,7 @@
 	    </header>
 
 	    <article id="weather">
-	    </article>   
+	    </article>
 	    
       <noscript>
         <div id="no-script">Damn! We can't do nothing nowadays without JavaScript mam'!</div>
@@ -138,13 +140,17 @@ if (navigator.geolocation) {
 }
 
 function geoSuccess(position) {
-  var s = document.querySelector('#status');
-  if (s.className == 'success') {
+  //var s = document.querySelector('#status');
+  var statusSpan = document.getElementById('status');
+  if (statusSpan.className == 'success') {
     // not sure why we're hitting this twice in FF, I think it's to do with a cached result coming back    
     return;
   }
-  s.className = 'success';
+  statusSpan.className = 'success';
+  statusSpan.firstChild.nodeValue = 'Almost ound...';
   fetchYahooLocation(position.coords.latitude, position.coords.longitude);
+  // BROKEN see http://developer.yahoo.com/yql/guide/yql-code-examples.html#yql_javascript
+  // see also http://stackoverflow.com/questions/1176668/how-to-use-yql-to-retrieve-web-results
 }
 function geoError(msg) {
   // TODO handle errors
