@@ -151,8 +151,6 @@ function geoSuccess(position) {
   statusSpan.className = 'success';
   statusSpan.firstChild.nodeValue = 'Almost found...';
   fetchYahooLocation(position.coords.latitude, position.coords.longitude);
-  // BROKEN see http://developer.yahoo.com/yql/guide/yql-code-examples.html#yql_javascript
-  // see also http://stackoverflow.com/questions/1176668/how-to-use-yql-to-retrieve-web-results
 }
 function geoError(msg) {
   // TODO handle errors
@@ -233,7 +231,6 @@ function _readYahooWeather() {
       
       // Use a nice weather image from http://www.stardock.com/weather.asp
       var imagesPath = 'stardock_images/';
-      //imagesPath = 'http://oneway.im/wthr.it/stardock_images/'; // FIXME PB with my local server
       
       var imageFile = imagesPath + w[yahoo['condition_code']] + '.png'
       var html = '<div id="weather-today">' +
@@ -349,8 +346,6 @@ function _readFlickrImgResponse(o){
 //
 
 function loadYQL(yql, cb){
-  if (console && console.log)
-      console.log('yql is: ' + yql);
   var src = 'http://query.yahooapis.com/v1/public/yql?' + //api_key=' + FLICKR_API_KEY +
             '&q=' + encodeURIComponent(yql) + '&format=json&callback=' + cb + 
             '&' + 'env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
