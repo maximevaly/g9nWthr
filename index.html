@@ -132,6 +132,8 @@
     
     <script>
 
+FLICKR_API_KEY='2a515c6436e75cdebcab1691636c3bf2'; // this app is named g9nWthr
+
 // Does the navigator support geostuff? (thanks @rem http://html5demos.com/geo)
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
@@ -166,7 +168,7 @@ function fetchYahooLocation(lat, lon){
   // http://www.geomojo.org/cgi-bin/reversegeocoder.cgi?long=-117.699444&lat=35.4775
   var yql = 'select * from geo.places where woeid in ('+
             'select place.woeid from flickr.places where lat='+
-            lat + ' and  lon=' + lon + ')';
+            lat + ' and  lon=' + lon + ' and api_key=' + FLICKR_API_KEY + ')';
   loadYQL(yql,'_readYahooLocation');
 } // fetchYahooLocation
 
@@ -287,7 +289,7 @@ function builFlickrYQLString(lat, lon) {
   var max_upload_date = todayTimestamp - offset;
   // TODO something smarter
   var yql = 'select * from flickr.photos.search(0,200) where ' +
-  'has_geo="true" and lat="' + lat + '" and lon="' + lon + '" and radius="20" and max_upload_date=' + max_upload_date + ';';
+  'has_geo="true" and lat="' + lat + '" and lon="' + lon + '" and radius="20" and max_upload_date=' + max_upload_date + ' and api_key=' + FLICKR_API_KEY + ';';
   return yql;
 } // builFlickrYQLString
 
@@ -346,10 +348,10 @@ function _readFlickrImgResponse(o){
 // THERE BE THE UTILITY STUFF
 //
 
-FLICKR_API_KEY='2a515c6436e75cdebcab1691636c3bf2'; // this app is named g9nWthr
-
 function loadYQL(yql, cb){
-  var src = 'http://query.yahooapis.com/v1/public/yql?api_key=' + FLICKR_API_KEY +
+  if (console && console.log)
+      console.log('yql is: ' + yql);
+  var src = 'http://query.yahooapis.com/v1/public/yql?' + //api_key=' + FLICKR_API_KEY +
             '&q=' + encodeURIComponent(yql) + '&format=json&callback=' + cb + 
             '&' + 'env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
   var head = document.getElementsByTagName('head')[0];
