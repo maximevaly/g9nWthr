@@ -25,9 +25,8 @@
     //--><!]]></style>
     
   	<meta charset="utf-8" />
-  	<!--
+
     <meta http-equiv="refresh" content="600" />
-    -->
     
     <title>g9nWthr</title>
   	
@@ -109,12 +108,12 @@
       div.clear { clear: both };
     </style>
 
-    <script type="text/javascript" src="jquery-1.5.1.js"></script>
     <script type="text/javascript" src="gga.js"></script>
     
   </head>
   
   <body>
+  
     <section id="geoposition">
   
       <header id="location">
@@ -136,8 +135,12 @@
     
     <script>
 
-/**
- *  Licensed under GNU GPL 2 or later and GNU LGPL 2 or later, see license.txt.
+/*
+ * Copyright (C) 2011  Maxime VALY
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License 
+ * version 2 as published by the Free Software Foundation.
  */
  
 var tools = tools || {};
@@ -148,56 +151,24 @@ tools.findElem = function(arr, elem) {
         return i;
   return -1;
 };
-// create a new node and return it
-tools.createNode = function(type, id, klass, innerHTML) {
-  if (type == undefined || type == null || type == '') {
-    return null;
-  }
-  var node = document.createElement(type);
-  if (id != undefined && id != null && id != '') {
-    node.setAttribute('id', id);
-  }
-  if (klass != undefined && klass != null && klass != '') {
-    node.setAttribute('class', klass);
-  }
-  if (innerHTML != undefined && innerHTML != null && innerHTML != '') {
-    node.innerHTML = innerHTML;
-  }
-  return node;
-};
-
-
-
-// Toolbox, taken from http://github.com/valums/file-uploader
-
-// Adds all missing properties from second obj to first obj
-tools.extend = function(first, second) {
-    for (var prop in second) {
-        first[prop] = second[prop];
+// https://developer.mozilla.org/En/Using_XMLHttpRequest#Example:_Asynchronous_request
+tools.xhr = function(url, callback) {
+  var request = new XMLHttpRequest();
+  request.open('GET', url, true);
+  request.onreadystatechange = function (aEvt) {
+    if (request.readyState == 4) {
+       if (request.status == 200) {
+         // automatically handle XML or JSON
+         request.responseXML && callback(request.responseXML) || callback(JSON.parse(request.responseText));
+         // TODO test for the JSON parser and fetch one if necessary
+       } else {
+         console && console.log && console.log('Error', request.statusText);
+       }
     }
-};
-// DOM Events
-tools.attach = function(element, type, fn) {
-    if (element.addEventListener) {
-        element.addEventListener(type, fn, false);
-    } else if (element.attachEvent) {
-        element.attachEvent('on' + type, fn);
-    }
-};
-tools.detach = function(element, type, fn) {
-    if (element.removeEventListener) {
-        element.removeEventListener(type, fn, false);
-    } else if (element.attachEvent) {
-        element.detachEvent('on' + type, fn);
-    }
-};
-tools.preventDefault = function(e) {
-    if (e.preventDefault) {
-        e.preventDefault();
-    } else {
-        e.returnValue = false;
-    }
-};
+  };
+  request.send(null);
+}
+
 
 //
 // JS Events
@@ -225,18 +196,17 @@ wthr.fire = function(event, data) {
 };
 
 
-
 // wthr.Weather
 // TODO extract a geolocation superclass
 
 var wthr = wthr || {};
 
-wthr.Weather = function(o) {
+// TODO handle some options
+wthr.Weather = function() {
   
   this._options = {
     apiKey: '2a515c6436e75cdebcab1691636c3bf2' // this app is named g9nWthr
   };
-  tools.extend(this._options, o);
 
   function initIcons() {
     // w[code_from_yahoo_weather] = 'stardock_image_file'
@@ -288,22 +258,22 @@ wthr.Weather = function(o) {
   this.w = initIcons();
 
   var that = this;
-  wthr.register('geo:success', function(event, data) {
+  wthr.register('geo:html5:success', function(event, data) {
     that.displayLocation(data);
   });
-  wthr.register('geo:error', function(event, data) {
+  wthr.register('geo:html5:error', function(event, data) {
     that.displayLocationError(data);
   });
-  wthr.register('yahoo:location', function(event, data) { 
-    that.updateLocation(data.query.results.place); // send just the place
+  wthr.register('yahoo:location:success', function(event, data) { 
+    that.updateLocation(data.query.results.place); // just send the place
   });
-  wthr.register('yahoo:location', function(event, data) { 
-    that.fetchWeather(data.query.results.place); // send just the place
+  wthr.register('yahoo:location:success', function(event, data) { 
+    that.fetchWeather(data.query.results.place); // just send the place
   });
-  wthr.register('yahoo:location', function(event, data) { 
-    that.fetchPhoto(data.query.results.place); // send just the place
+  wthr.register('yahoo:location:success', function(event, data) { 
+    that.fetchPhoto(data.query.results.place); // just send the place
   });
-  wthr.register('yahoo:weather', function(event, data) { 
+  wthr.register('yahoo:weather:success', function(event, data) { 
     that.readWeather(data); // data is a XML document
   });
   
@@ -311,6 +281,15 @@ wthr.Weather = function(o) {
     this.fetchPosition();
   } else {
     // TODO fallback to IP stuff
+    //var url = 'http://www.geoplugin.net/json.gp?jsoncallback=?';
+    //var callback = function(data) {
+    //  if (data && data.geoplugin_countryName) {
+    //    alert(data['geoplugin_countryName']);
+    //  } else {
+    //    alert(data);
+    //  }
+    //};
+    //tools.xhr(url, callback);
   }
 };
 
@@ -324,14 +303,14 @@ wthr.Weather.prototype = {
     if (this.hasGeolocation) {
       var that = this;
       var geoSuccess = function(data) {
-        wthr.fire('geo:success', data);
+        wthr.fire('geo:html5:success', data);
       };
       var geoError = function(data) {
-        wthr.fire('geo:error', data);
+        wthr.fire('geo:html5:error', data);
       };
       navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
     } else {
-      wthr.fire('geo:error', 'navigator.geolocation is not supported.');
+      wthr.fire('geo:html5:error', 'navigator.geolocation is not supported.');
     }
   },
   
@@ -361,18 +340,19 @@ wthr.Weather.prototype = {
               'select place.woeid from flickr.places where lat='+
               lat + ' and  lon=' + lon + ' and api_key=' + this._options.apiKey + ')';
     var url = 'http://query.yahooapis.com/v1/public/yql?' + 
-              '&q=' + encodeURIComponent(yql) + '&format=json&callback=' + //callback + 
-              '&' + 'env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
+              '&q=' + encodeURIComponent(yql) + '&format=json&callback=' +  
+              '&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
     var callback = function(data) {
       if (data.query.results) {
-        wthr.fire('yahoo:location', data);
+        wthr.fire('yahoo:location:success', data);
+      } else {
+        wthr.fire('yahoo:location:error', data);
       }
     };
-    $.getJSON(url, callback); // TODO replace jQuery dependance
+    tools.xhr(url, callback);
   },
   
-  updateLocation: function(data) {
-    var place = data;
+  updateLocation: function(place) {
     var out = '<p>You are in ' + place.name + '! (' + place.country.content + ')';
     document.getElementById('location').innerHTML = out;
   },
@@ -398,9 +378,9 @@ wthr.Weather.prototype = {
     var url = getProxyURL() + '?yws_path=' + encodeURIComponent(path);
     
     var callback = function(data) {
-      wthr.fire('yahoo:weather', data);
+      wthr.fire('yahoo:weather:success', data);
     };
-    $.get(url, callback);
+    tools.xhr(url, callback);
   },
 
   readWeather: function(xmlDoc) {
@@ -424,14 +404,11 @@ wthr.Weather.prototype = {
       yahoo['condition_temp'] = condition.getAttribute('temp');
       yahoo['condition_date'] = condition.getAttribute('date');
       
-      var divWeather = document.getElementById('weather');
-      
       var link = xmlDoc.getElementsByTagName('link')[0];
       var weatherUrl = link.textContent;
       
       // Use a nice weather image from http://www.stardock.com/weather.asp
       var imagesPath = 'stardock_images/';
-      
       var imageFile = imagesPath + this.w[yahoo['condition_code']] + '.png'
       var html = '<div id="weather-today">' +
         '<a href="' + weatherUrl + '?unit=' + yahoo['units_temp'] + '">' +
@@ -453,20 +430,20 @@ wthr.Weather.prototype = {
           var code = forecasts[i].getAttribute('code');
           var imageFile = imagesPath + this.w[code] + '.png'
           html += '<div id="' + day + '" class="forecasts">'+
-          ' <img class="forecast-picto" src="' + imageFile + '" title="'+ text +'" ></img>' +
-            '<p>' + day + ', ' + date + ' <br> ' + low + '°' + yahoo['units_temp'] + ' / ' + high + '°' + yahoo['units_temp'] + '</p>' + '<div class="clear"></div>' +
-          '</div>';
+              ' <img class="forecast-picto" src="' + imageFile + '" title="'+ text +'" ></img>' +
+              '<p>' + day + ', ' + date + ' <br> ' + low + '°' + yahoo['units_temp'] + ' / ' + high + '°' + yahoo['units_temp'] + '</p>' + 
+              '<div class="clear"></div>' +
+            '</div>';
           if (i == 2) {
-            break;
+            break; // limit to 2 days
           }
         }
         html = html + '</div>';
       }
-      
       html = html + '<div class="clear"></div>';
-      
-      var newP = tools.createNode('div', 'weather-wrapper', null, html);
-      divWeather.appendChild(newP);
+
+      var divWeather = document.getElementById('weather');
+      divWeather.innerHTML = '<div id="weather-wrapper" class="">' + html + '</div>';
     } catch(e) {
         // err :/
     }
@@ -480,13 +457,13 @@ wthr.Weather.prototype = {
       var offset = ONE_YEAR * Math.floor(Math.random()*5);
       var todayTimestamp = new Date().getTime();
       var max_upload_date = todayTimestamp - offset;
-      // TODO something smarter
+      // TODO something smarter to get better photos
       var yql = 'select * from flickr.photos.search(0,200) where ' +
       'has_geo="true" and lat="' + lat + '" and lon="' + lon + '" and radius="20" and max_upload_date=' + max_upload_date + ' and api_key=' + this._options.apiKey + ';';
       var url = 'http://query.yahooapis.com/v1/public/yql?' +
             '&q=' + encodeURIComponent(yql) + '&format=json&callback=' +
             '&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
-      $.getJSON(url, this.readFlickrImgResponse); // TODO replace jQuery dependance
+      tools.xhr(url, this.readFlickrImgResponse);
   },
   
   readFlickrImgResponse: function(data){
@@ -504,28 +481,10 @@ wthr.Weather.prototype = {
       div.appendChild(flickr);
     }
   }
-  
 };
 
 var myWeather = new wthr.Weather();
 
-
-//
-// THERE BE THE UTILITY STUFF
-//
-
-// 'Bien développer pour le Web 2.0' II.5
-function getRequester() {
-  var result = false;
-  if (!result && 'undefined' != typeof XMLHttpRequest) {
-    try {
-      result = new XMLHttpRequest();
-    } catch (e) {
-      result = false;
-    }
-  }
-  return result;
-} // getRequester
 
 	  </script>
   </body>
