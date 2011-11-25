@@ -16,9 +16,6 @@
     cool stuff like get the current and upcoming weather (with Yahoo! Weather)
     or fetch some nice geolocated picture from Flickr to display in our page.
     
-    Coming later: we'll try to do without the HTML5-geo-magical-stuff and just 
-    do some IP-also-magical-sniffing.
-    
     Sounds fun? Well it is!
     Let's go!
     
@@ -26,8 +23,6 @@
     
   	<meta charset="utf-8" />
 
-    <meta http-equiv="refresh" content="600" />
-    
     <title>g9nWthr</title>
   	
   	<link href="http://fonts.googleapis.com/css?family=Kreon" rel="stylesheet" type="text/css">
@@ -46,9 +41,7 @@
         color: #000000;
         text-align: center;
       }
-      #geoposition { }
       #weather {
-        background-color: #ffffff;
         background-color: #F3F3F3;
         box-shadow: 0px 4px 10px #888;
       }
@@ -88,6 +81,22 @@
         text-align: center;
         width: 100%;
       }
+      #location-message {
+        display: inline;
+      }
+      #location-buttons {
+        color: #c1c1c1;
+        font-size: 12px;
+        position: absolute;
+        right: 10px;
+      }
+      #location-buttons a:link,
+      #location-buttons a:visited,
+      #location-buttons a:hover,
+      #location-buttons a:active {
+        color: #c1c1c1;
+        text-decoration: none;
+      }
       #photo {
         margin: 30px 10px 0px;
       }
@@ -95,9 +104,9 @@
         font-size: 140px;
       }
       footer {
-        bottom: 10px;
+        /*bottom: 10px;
         right: 10px;
-        position: fixed;
+        position: fixed;*/
       }
       footer a:link,
       footer a:active,
@@ -109,7 +118,7 @@
     </style>
 
     <script type="text/javascript" src="gga.js"></script>
-    
+    <script type="text/javascript" src="/js/jquery-1.5.1.js"></script>
   </head>
   
   <body>
@@ -117,9 +126,15 @@
     <section id="geoposition">
   
       <header id="location">
-        <p>Finding your location: <span id="status">checking...</span></p>
+        <p id="location-message">
+          Finding your location: <span id="status">checking...</span>
+        </p>
+        <span id="location-buttons">
+          <a href="#" id="html5" title="Detect your location using the HTML5 API">HTML5</a>
+          <a href="#" id="ip" title="Detect your location using your IP address">IP</a>
+        </span>
 	    </header>
-
+          
 	    <article id="weather">
 	    </article>
 	    
@@ -130,8 +145,12 @@
     </section>
 
     <footer>
-	      <a href="https://github.com/maximevaly/g9nWthr">github</a>
+      <!-- nothing to see here -->
     </footer>
+    
+    <!-- Github ribbon -->  
+<a href="http://github.com/you"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://a248.e.akamai.net/assets.github.com/img/ce742187c818c67d98af16f96ed21c00160c234a/687474703a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f677261795f3664366436642e706e67" alt="Fork me on GitHub"></a>
+
     
     <script>
 
@@ -167,31 +186,83 @@ tools.xhr = function(url, callback) {
     }
   };
   request.send(null);
-}
+};
 
+
+// Specific AJAX tool for JSONP calls, sorten version of the work of Sky Sanders
+// http://stackapps.com/questions/891/how-to-call-the-api-via-jsonp-in-plain-old-javascript
+tools.jsonp_callbackId = 0;
+tools.jsonp_callbacks = tools.jsonp_callbacks || {};
+tools.jsonp = function(url, success, error) {
+  var callBackName = "_callback" + this.jsonp_callbackId++;
+  // setup the callback
+  tools.jsonp_callbacks[callBackName] = function(data) {
+      delete tools.jsonp_callbacks[callBackName];
+      if (data.error) {
+          if (error) {
+              data.error.callback = callBackName;
+              error(data.error);
+          };
+      } else {
+          success(data);
+      };
+  };
+
+  // send the request
+  var scr = document.createElement("script");
+  scr.type = "text/javascript";
+  scr.src = url + "?jsoncallback=tools.jsonp_callbacks." + callBackName;
+  var head = document.getElementsByTagName("head")[0];
+  head.insertBefore(scr, head.firstChild);
+
+  window.setTimeout(function() {
+      if (typeof tools.jsonp_callbacks[callBackName] == "function") {
+          // replace success with null callback in case the request is just very latent.
+          that[callBackName] = function(data) {
+              delete tools.jsonp_callbacks[callBackName];
+          };
+          // call the error callback
+          error && error({ code: 408, message: "Request Timeout", callback: callBackName });
+          // set a longer timeout to safely clean up the unused callback.
+          window.setTimeout(function() {
+              if (typeof tools.jsonp_callbacks[callBackName] == "function") {
+                  delete tools.jsonp_callbacks[callBackName];
+              };
+          }, 60000);
+      };
+  }, 10000); // default to 10 second timeout
+};
 
 //
 // JS Events
-// TODO an EventsCapable superclass?
-var wthr = wthr || {};
-wthr._events = {};
-wthr.register = function(event, callback) {
+tools._appEvents = {};
+tools.register = function(event, callback) {
   if (!callback || !typeof callback === 'function')
     return;
-  var callbacks = wthr._events[event] || [];
+  var callbacks = tools._appEvents[event] || [];
   callbacks.push(callback);
-  wthr._events[event] = callbacks;
+  tools._appEvents[event] = callbacks;
 };
-wthr.unregister = function(event, callback) {
-  var pos = tools.findElem(wthr._events[event], callback);
-  pos && wthr._events[event].pop(pos);
+tools.unregister = function(event, callback) {
+  var pos = tools.findElem(tools._appEvents[event], callback);
+  pos && tools._appEvents[event].pop(pos);
 };
-wthr.fire = function(event, data) {
-  var callbacks = wthr._events && wthr._events[event];
+tools.fire = function(event, data) {
+  var callbacks = tools._appEvents && tools._appEvents[event];
   if (callbacks) {
     for (i = 0; i < callbacks.length; i++) {
       callbacks[i](event, data);
     }
+  }
+};
+
+//
+// DOM Events
+tools.addListener = function(elem, baseName, handler) {
+  if (elem.addEventListener) {
+    elem.addEventListener(baseName, handler, false);
+  } else if (element.attachEvent) {
+    elem.attachEvent('on' + baseName, handler);
   }
 };
 
@@ -200,7 +271,6 @@ wthr.fire = function(event, data) {
 // TODO extract a geolocation superclass
 
 var wthr = wthr || {};
-
 // TODO handle some options
 wthr.Weather = function() {
   
@@ -258,60 +328,78 @@ wthr.Weather = function() {
   this.w = initIcons();
 
   var that = this;
-  wthr.register('geo:html5:success', function(event, data) {
+  tools.register('geo:html5:success', function(event, data) {
+    that.displayLocation({
+      latitude: data.coords.latitude, 
+      longitude: data.coords.longitude
+    });
+  });
+  tools.register('geo:html5:error', function(event, data) {
+    that.displayLocationError(data);
+  });  
+  tools.register('geo:ip:success', function(event, data) {
     that.displayLocation(data);
   });
-  wthr.register('geo:html5:error', function(event, data) {
+  tools.register('geo:ip:error', function(event, data) {
     that.displayLocationError(data);
   });
-  wthr.register('yahoo:location:success', function(event, data) { 
+  tools.register('yahoo:location:success', function(event, data) { 
     that.updateLocation(data.query.results.place); // just send the place
   });
-  wthr.register('yahoo:location:success', function(event, data) { 
+  tools.register('yahoo:location:success', function(event, data) { 
     that.fetchWeather(data.query.results.place); // just send the place
   });
-  wthr.register('yahoo:location:success', function(event, data) { 
+  tools.register('yahoo:location:success', function(event, data) { 
     that.fetchPhoto(data.query.results.place); // just send the place
   });
-  wthr.register('yahoo:weather:success', function(event, data) { 
+  tools.register('yahoo:weather:success', function(event, data) { 
     that.readWeather(data); // data is a XML document
   });
   
-  if (this.hasGeolocation()) {
-    this.fetchPosition();
-  } else {
-    // TODO fallback to IP stuff
-    //var url = 'http://www.geoplugin.net/json.gp?jsoncallback=?';
-    //var callback = function(data) {
-    //  if (data && data.geoplugin_countryName) {
-    //    alert(data['geoplugin_countryName']);
-    //  } else {
-    //    alert(data);
-    //  }
-    //};
-    //tools.xhr(url, callback);
-  }
+  document.getElementById('html5').style.display = 'none';
+  document.getElementById('ip').style.display = 'none';
+  
+  this.fetchPosition();
 };
 
 wthr.Weather.prototype = {
 
-  hasGeolocation: function() {
-    return navigator.geolocation && true || false;
+  fetchPosition: function() {
+    if (navigator.geolocation) {
+      this.fetchPositionHTML5();
+      // tools.fire('geo:html5:error', 'navigator.geolocation is not supported.');
+    } else {
+      this.fetchPositionIP();
+    }
   },
   
-  fetchPosition: function() {
-    if (this.hasGeolocation) {
-      var that = this;
-      var geoSuccess = function(data) {
-        wthr.fire('geo:html5:success', data);
-      };
-      var geoError = function(data) {
-        wthr.fire('geo:html5:error', data);
-      };
-      navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
-    } else {
-      wthr.fire('geo:html5:error', 'navigator.geolocation is not supported.');
-    }
+  fetchPositionHTML5: function() {
+    var that = this;
+    var geoSuccess = function(data) {
+    document.getElementById('html5').style.display = 'none';
+    document.getElementById('ip').style.display = 'inline';
+    tools.fire('geo:html5:success', data);
+    };
+    var geoError = function(data) {
+      document.getElementById('html5').style.display = 'inline';
+      document.getElementById('ip').style.display = 'none';
+      tools.fire('geo:html5:error', data);
+    };
+    navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
+  },
+  
+  fetchPositionIP: function() {
+    var url = "http://www.geoplugin.net/json.gp";//?jsoncallback=?";
+    var callback = function(data) {
+      if (data && data.geoplugin_countryName) {
+        var latitude = data['geoplugin_latitude'];
+        var longitude = data['geoplugin_longitude'];
+        document.getElementById('html5').style.display = 'inline';
+        document.getElementById('ip').style.display = 'none';
+        tools.fire('geo:ip:success', {latitude: latitude, longitude: longitude});
+      }
+    };
+    tools.jsonp(url, callback);
   },
   
   displayLocationError: function(msg) { // TODO handle errors
@@ -320,15 +408,20 @@ wthr.Weather.prototype = {
     s.className = 'fail';
   },
   
-  displayLocation: function(position) {
+  displayLocation: function(coords) {
     var statusSpan = document.getElementById('status');
     if (statusSpan && statusSpan.className == 'success') {
       // not sure why we're hitting this twice in FF, I think it's to do with a cached result coming back    
       return;
     }
-    statusSpan.className = 'success';
-    statusSpan.firstChild.nodeValue = 'Almost found...';
-    this.queryWOEID(position.coords.latitude, position.coords.longitude);
+    
+    // don't bother displaying a status if the HTML is not correct
+    if (statusSpan) {
+      statusSpan.className = 'success';
+      statusSpan.firstChild.nodeValue = 'Almost found...';    
+    }
+    
+    this.queryWOEID(coords.latitude, coords.longitude);
   },
 
   queryWOEID: function(lat, lon) {
@@ -344,17 +437,17 @@ wthr.Weather.prototype = {
               '&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
     var callback = function(data) {
       if (data.query.results) {
-        wthr.fire('yahoo:location:success', data);
+        tools.fire('yahoo:location:success', data);
       } else {
-        wthr.fire('yahoo:location:error', data);
+        tools.fire('yahoo:location:error', data);
       }
     };
     tools.xhr(url, callback);
   },
   
-  updateLocation: function(place) {
-    var out = '<p>You are in ' + place.name + '! (' + place.country.content + ')';
-    document.getElementById('location').innerHTML = out;
+  updateLocation: function(place) { 
+    var out = 'You are in ' + place.name + '! (' + place.country.content + ')';
+    document.getElementById('location-message').innerHTML = out;
   },
   
   fetchWeather: function(place) {
@@ -378,7 +471,7 @@ wthr.Weather.prototype = {
     var url = getProxyURL() + '?yws_path=' + encodeURIComponent(path);
     
     var callback = function(data) {
-      wthr.fire('yahoo:weather:success', data);
+      tools.fire('yahoo:weather:success', data);
     };
     tools.xhr(url, callback);
   },
@@ -471,12 +564,21 @@ wthr.Weather.prototype = {
       var randomId = Math.floor(Math.random()*data.query.results.photo.length);
       var photo = data.query.results.photo[randomId];
       var url = 'http://farm' + photo.farm + '.static.flickr.com/' + photo.server + '/' + photo.id + '_' + photo.secret + '.jpg';
-      var flickr = document.createElement('article');
-      flickr.id = 'fromflickr';
-      flickr.innerHTML = '' +
+      var imageHTML = ''+
       '<a href="http://www.flickr.com/photos/' + photo.owner + '/' + photo.id + '">' +
       '<img id="photo" src="' + url + '" /' + '></a>' +
       '<p id="imgtitle">' + photo.title + '</p>';
+      
+      var flickr = function(id) {
+        if (document.getElementById(id)) {
+          return document.getElementById(id);
+        }
+        var flickr = document.createElement('article');
+        flickr.id = id;
+        return flickr;
+      }('fromflickr');
+      flickr.innerHTML = imageHTML;
+      
       var div = document.getElementById('geoposition');
       div.appendChild(flickr);
     }
@@ -484,7 +586,14 @@ wthr.Weather.prototype = {
 };
 
 var myWeather = new wthr.Weather();
-
+tools.addListener(document.getElementById('html5'), 'click', function(e) {
+  myWeather.fetchPositionHTML5();
+  e.preventDefaults();
+});
+tools.addListener(document.getElementById('ip'), 'click', function(e) {
+  myWeather.fetchPositionIP();
+  e.preventDefaults();
+});
 
 	  </script>
   </body>
