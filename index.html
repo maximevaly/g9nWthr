@@ -612,11 +612,11 @@ wthr.Weather.prototype = {
 var myWeather = new wthr.Weather();
 tools.addListener(document.getElementById('html5'), 'click', function(e) {
   myWeather.fetchPositionHTML5();
-  e.preventDefaults();
+  e.preventDefault();
 });
 tools.addListener(document.getElementById('ip'), 'click', function(e) {
   myWeather.fetchPositionIP();
-  e.preventDefaults();
+  e.preventDefault();
 });
 
 	  </script>
