@@ -84,6 +84,17 @@
       #location-message {
         display: inline;
       }
+      #location-message a:link,
+      #location-message a:visited,
+      #location-message a:hover,
+      #location-message a:active {
+        color: #ffffff;
+        text-decoration: none;
+      }
+      #location-message a:hover,
+      #location-message a:active {
+        color: #c1c1c1;
+      }
       #location-buttons {
         color: #c1c1c1;
         font-size: 12px;
@@ -344,13 +355,13 @@ wthr.Weather = function() {
     that.displayLocationError(data);
   });
   tools.register('yahoo:location:success', function(event, data) { 
-    that.updateLocation(data.query.results.place); // just send the place
+    that.updateLocation(data);
   });
   tools.register('yahoo:location:success', function(event, data) { 
-    that.fetchWeather(data.query.results.place); // just send the place
+    that.fetchWeather(data);
   });
   tools.register('yahoo:location:success', function(event, data) { 
-    that.fetchPhoto(data.query.results.place); // just send the place
+    that.fetchPhoto(data);
   });
   tools.register('yahoo:weather:success', function(event, data) { 
     that.readWeather(data); // data is a XML document
@@ -436,6 +447,12 @@ wthr.Weather.prototype = {
               '&q=' + encodeURIComponent(yql) + '&format=json&callback=' +  
               '&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
     var callback = function(data) {
+      if (!data.longitude) {
+        data['longitude'] = lon;
+      }
+      if (!data.latitude) {
+        data['latitude'] = lat;
+      }
       if (data.query.results) {
         tools.fire('yahoo:location:success', data);
       } else {
@@ -444,13 +461,17 @@ wthr.Weather.prototype = {
     };
     tools.xhr(url, callback);
   },
-  
-  updateLocation: function(place) { 
-    var out = 'You are in ' + place.name + '! (' + place.country.content + ')';
+
+  updateLocation: function(data) {
+    var place = data.query.results.place;
+    var mapLink = 'http://maps.google.com/?ll=' + data.latitude + ',' + data.longitude + '&spn=0.00773,0.019269'; // this last part is the zoom (0.123707,0.308304 is higher)
+    var out = 'You are in <a href="' + mapLink + '" title="See a map of your location">' + place.name + '</a>! (' + 
+    place.country.content + ')';
     document.getElementById('location-message').innerHTML = out;
   },
   
-  fetchWeather: function(place) {
+  fetchWeather: function(data) {
+    var place = data.query.results.place;
     var woeid = place.woeid;
     var units = (place.country.code == 'US' ? 'f' : 'c');
     
@@ -542,21 +563,24 @@ wthr.Weather.prototype = {
     }
   },
   
-  fetchPhoto: function(place) {
-      // Get a photo from Flickr
-      var lat = place.centroid.latitude;
-      var lon = place.centroid.longitude;
-      var ONE_YEAR = 220147200;
-      var offset = ONE_YEAR * Math.floor(Math.random()*5);
-      var todayTimestamp = new Date().getTime();
-      var max_upload_date = todayTimestamp - offset;
-      // TODO something smarter to get better photos
-      var yql = 'select * from flickr.photos.search(0,200) where ' +
-      'has_geo="true" and lat="' + lat + '" and lon="' + lon + '" and radius="20" and max_upload_date=' + max_upload_date + ' and api_key=' + this._options.apiKey + ';';
-      var url = 'http://query.yahooapis.com/v1/public/yql?' +
-            '&q=' + encodeURIComponent(yql) + '&format=json&callback=' +
-            '&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
-      tools.xhr(url, this.readFlickrImgResponse);
+  fetchPhoto: function(data) {
+    var place = data.query.results.place;
+    // Get a photo from Flickr
+    var lat = data.latitude;
+    var lon = data.longitude;
+    var ONE_YEAR = 220147200;
+    var offset = ONE_YEAR * Math.floor(Math.random()*5);
+    var todayTimestamp = new Date().getTime();
+    var max_upload_date = todayTimestamp - offset;
+    // TODO something smarter to get better photos
+    var yql = 'select * from flickr.photos.search(0,200) where ' + 
+      'has_geo="true" and lat="' + lat + '" and lon="' + lon + 
+      '" and radius="20" and max_upload_date=' + max_upload_date + 
+      ' and api_key=' + this._options.apiKey + ';';
+    var url = 'http://query.yahooapis.com/v1/public/yql?' +
+      '&q=' + encodeURIComponent(yql) + '&format=json&callback=' +
+      '&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
+    tools.xhr(url, this.readFlickrImgResponse);
   },
   
   readFlickrImgResponse: function(data){
