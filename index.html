@@ -25,7 +25,8 @@
     
     <!--
     TODO:
-     * extract and document a geolocation lib with WOEID support
+     * register g9n it as a seperate project
+     * add a link to this stuff for maps support http://gazpo.com/2011/11/geolocation/
      * clean the HTML5 tags
      * add flickr tags support or something
      * do stupid stuff with the Twitter API?
@@ -127,14 +128,15 @@
     </style>
 
     <script type="text/javascript" src="gga.js"></script>
+    <script type="text/javascript" src="g9n.js"></script>
     
   </head>
   
   <body>
   
-    <section id="geoposition">
+    <div id="geoposition">
   
-      <header id="location">
+      <div id="location">
         <p id="location-message">
           Finding your location: <span id="status">checking...</span>
         </p>
@@ -142,21 +144,17 @@
           <a href="#" id="html5" title="Detect your location using the HTML5 API">HTML5</a>
           <a href="#" id="ip" title="Detect your location using your IP address">IP</a>
         </span>
-      </header>
+      </div>
           
-      <article id="weather">
-      </article>
+      <div id="weather">
+      </div>
 	    
       <noscript>
         <div id="no-script">Damn! We can't do nothing nowadays without JavaScript mam'!</div>
       </noscript>
 
-    </section>
+    </div>
 
-    <footer>
-      <!-- nothing to see here -->
-    </footer>
-    
     <!-- Github ribbon -->  
     <a href="http://github.com/maximevaly/g9nWthr/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://a248.e.akamai.net/assets.github.com/img/ce742187c818c67d98af16f96ed21c00160c234a/687474703a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f677261795f3664366436642e706e67" alt="Fork me on GitHub"></a>
 
@@ -170,7 +168,10 @@
  * modify it under the terms of the GNU General Public License 
  * version 2 as published by the Free Software Foundation.
  */
- 
+
+//
+// Toolbox
+
 var tools = tools || {};
 tools.findElem = function(arr, elem) {
   if (arr && elem)
@@ -275,92 +276,8 @@ tools.addListener = function(elem, baseName, handler) {
 
 
 //
-// geolocation stuff
-var geo = geo || {};
-
-// Fetches the position of the user using the more reliable available method 
-// (i.e. HTML5 if you're lucky, IP otherwise). Success callback is called on 
-// success and receives a data object containing the latitude and longitude of
-// the client. Error callback is called on error and receives a cryptic message
-// string.
-geo.fetchPosition = function(success, error) {
-  if (navigator.geolocation) {
-    this.fetchPositionHTML5(success, error);
-  } else {
-    this.fetchPositionIP(success, error);
-  }
-};
-
-// Gets the position of the user using the HTML5 geolocation capabilities of 
-// her browser. Success callback is called on success and receives a data object
-// containing the latitude and longitude of the client. Error callback is called
-// on error and receives a cryptic message string.
-geo.fetchPositionHTML5 = function(success, error) {
-  if (!navigator.geolocation) {
-    error("HTML5 geolocation non supported.");
-    return;
-  }
-  var _success = function(data) {
-    success({
-      latitude: data.coords.latitude, 
-      longitude: data.coords.longitude
-    });
-  };
-  var _error = function(data) {
-    error(data);
-  };
-  navigator.geolocation.getCurrentPosition(_success, _error);
-};
-
-// Guesses the position of the user by some IP related magic. Success callback 
-// is called on success and receives a data object containing the latitude and 
-// longitude of the client. Error callback is called on error and receives a
-// cryptic message string.
-geo.fetchPositionIP = function(success, error) {
-  var url = "http://www.geoplugin.net/json.gp";
-  tools.jsonp(url, function(data) {
-    if (data && data.geoplugin_latitude && data.geoplugin_longitude) {
-      success({
-        latitude: data['geoplugin_latitude'],
-        longitude: data['geoplugin_longitude']
-      });
-    } else {
-      error("Could not locate user.");
-    }
-  });
-};
-
-// Uses the Yahoo Geoplanet API to retrieve the WOIED associated to the given
-// latitude and longitude. Success callback is called on success and receives a
-// data object containing the latitude and longitude of the client passed as 
-// arguments and a lot infos returned by Yahoo. Error callback is called on 
-// error and receives whatever we saved from the call. The API key is needed to
-// make calls using the Yahoo Query Language. See documentation and stuff.
-// http://developer.yahoo.com/
-geo.queryWOEID = function(latitude, longitude, success, error, apiKey) {
-  // http://stackoverflow.com/questions/1822650/yahoo-weather-api-woeid-retrieval
-  // http://thinkvitamin.com/code/getting-started-with-yahoo-geoplanet-explorer/
-  // http://www.geomojo.org/cgi-bin/reversegeocoder.cgi?long=-117.699444&lat=35.4775
-  var yql = 'select * from geo.places where woeid in ('+
-            'select place.woeid from flickr.places where lat='+
-            latitude + ' and  lon=' + longitude + ' and api_key=' + apiKey + ')';
-  var url = 'http://query.yahooapis.com/v1/public/yql?' + 
-            '&q=' + encodeURIComponent(yql) + '&format=json&callback=' +  
-            '&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
-  var _callback = function(data) {
-    data.latitude = data.latitude || latitude;
-    data.longitude = data.longitude || longitude;
-    if (data.query.results) {
-      success(data);
-    } else {
-      error(data);
-    }
-  };
-  tools.xhr(url, _callback);
-};
-
-
 // wthr.Weather
+
 var wthr = wthr || {};
 wthr.Weather = function() {
   
@@ -464,17 +381,17 @@ wthr.Weather.prototype = {
       document.getElementById('ip').style.display = 'none';
       tools.fire('geo:html5:error', data);
     };
-    geo.fetchPositionHTML5(geoSuccess, geoError);
+    g9n.fetchPositionHTML5(geoSuccess, geoError);
   },
   
   fetchPositionIP: function() {
     var geoSuccess = function(data) {
-        tools.fire('geo:ip:success', data);
+      tools.fire('geo:ip:success', data);
     };
     var geoError = function(data) {
       alert(data);
     };
-    geo.fetchPositionIP(geoSuccess, geoError);
+    g9n.fetchPositionIP(geoSuccess, geoError);
   },
   
   displayLocationError: function(msg) { // TODO handle errors
@@ -506,7 +423,7 @@ wthr.Weather.prototype = {
     var error = function(data) {
       tools.fire('yahoo:location:error', data);
     };
-    geo.queryWOEID(lat, lon, success, error, this.apiKey);
+    g9n.findPlace(lat, lon, success, error, this.apiKey);
   },
 
   updateLocation: function(data) {
@@ -659,10 +576,14 @@ wthr.Weather.prototype = {
 
 var myWeather = new wthr.Weather();
 tools.addListener(document.getElementById('html5'), 'click', function(e) {
+  document.getElementById('html5').style.display = 'none';
+  document.getElementById('ip').style.display = 'inline';
   myWeather.fetchPositionHTML5();
   e.preventDefault();
 });
 tools.addListener(document.getElementById('ip'), 'click', function(e) {
+  document.getElementById('html5').style.display = 'inline';
+  document.getElementById('ip').style.display = 'none';
   myWeather.fetchPositionIP();
   e.preventDefault();
 });
