@@ -6,10 +6,11 @@
  * version 2 as published by the Free Software Foundation.
  */
 
+// g9n.js is a really simple library to get easily the user's location 
+// (latitude & longitude) and fetch information about the place.
 
 //
 // Toolbox
- 
 var tools = tools || {};
 tools.findElem = function(arr, elem) {
   if (arr && elem)
@@ -127,11 +128,19 @@ g9n.fetchPositionHTML5 = function(success, error) {
 g9n.fetchPositionIP = function(success, error, url) {
   var url = url || "http://www.geoplugin.net/json.gp";
   tools.jsonp(url, function(data) {
+    // try to get the infos from the geoplugin response
     if (data && data.geoplugin_latitude && data.geoplugin_longitude) {
       success({
         latitude: data['geoplugin_latitude'],
         longitude: data['geoplugin_longitude']
       });
+    // did we miss something? custom url/service?
+    } else if (data && data.latitude && data.longitude) {
+      success({
+        latitude: data['latitude'],
+        longitude: data['longitude']
+      });
+    // Yep! That's a failure!
     } else {
       error("Could not locate user.");
     }
