@@ -1,0 +1,197 @@
+article, aside, figure, footer, header, hgroup, 
+menu, nav, section { display: block; }
+* {
+    margin: 0px;
+    padding: 0px;
+}
+* { font-family: 'Kreon', arial, serif; }
+
+img { border: 0px; }
+body {
+    background-color: #ffffff;
+    color: #000000;
+    text-align: center;
+}
+
+#weather {
+    background-color: #F3F3F3;
+    box-shadow: 0px 4px 10px #888;
+    color: #000000;
+}
+#weatherPicto {
+    bottom: -10px;
+    position: relative;
+}
+#weather-wrapper {
+    margin: auto;
+    max-width: 600px;
+}
+#weather-today {
+    float: left;
+}
+#weather-forecasts {
+    float: right;
+    text-align: center;
+}
+#weather-forecasts .forecasts {
+    margin-top: 20px;
+}
+#weather-forecasts .forecasts p {
+    float: left;
+    margin-top: 5px;
+}
+.forecast-picto {
+    float: left;
+    width: 50px;
+}
+.forcasts-dates {
+    display: block;
+}
+.forcasts-descriptions {
+    display: none;
+}
+#location {
+    background-color: #000000;
+    color: #ffffff;
+    font-size: 20px;
+    padding: 10px 0px;
+    text-align: center;
+    width: 100%;
+}
+#location-message {
+    display: inline;
+}
+#location-message a:link,
+#location-message a:visited,
+#location-message a:hover,
+#location-message a:active {
+    color: #ffffff;
+    text-decoration: none;
+}
+#location-message a:hover,
+#location-message a:active {
+    color: #c1c1c1;
+}
+#location-buttons {
+    color: #c1c1c1;
+    font-size: 12px;
+    position: absolute;
+    right: 10px;
+}
+#location-buttons a:link,
+#location-buttons a:visited,
+#location-buttons a:hover,
+#location-buttons a:active {
+    color: #c1c1c1;
+    text-decoration: none;
+}
+#photo {
+    margin: 30px 10px 0px;
+}
+#temperature {
+    font-size: 140px;
+    line-height: 1;
+}
+#github-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: 0;
+}
+#github-text {
+    display: none;
+}
+
+div.clear { 
+    clear: both; 
+}
+
+/** w > 600  ||  600 > w > 480  ||  480 > w > 330 || 330 > w */
+@media (max-width: 600px) { /** TODO swtich to max-device-width */
+    /*body { background-color: #B7B7FF; }*/
+    #weather-today {
+        float: none;
+    }
+    #weather-forecasts {
+        float: none;
+    }
+    #weather-forecasts .forecasts {
+        float: left;
+        margin: 0px 0px 10px 0px;
+        width: 50%;
+    }
+    #weather-forecasts .forecasts .forecast-content-wrappers {
+        margin: auto;
+        width: 200px;
+    }
+    #photo {
+        margin: 0px;
+        width: 100%;
+    }
+    #github-img {
+        display: none;
+    }
+    /*
+    #github-text {
+        display: inline;
+    }
+    #github {
+        background-color: #000000;
+        bottom: 0px;
+        color: #ffffff;
+        left: 0px;
+        position: absolute;
+        text-align: center;
+        width: 100%;
+    }
+    */
+}
+@media (max-width: 480px) {
+    /*body { background-color: #FFF56A; }*/
+    #temperature {
+        font-size: 100px;
+    }
+    #location-buttons {
+        display: none;
+    }
+    #weather-forecasts .forecasts .forecast-content-wrappers {
+        width: 165px;
+    }
+}
+@media (max-width: 330px) {
+    /*body { background-color: #FF7A46; }*/
+    #weather-today {
+        margin-bottom: -80px;
+    }
+    #weather-today a {
+        display: block;
+    }
+    #temperature {
+        bottom: 60px;
+        position: relative;
+    }
+    #weather-forecasts {
+        float: none;
+        margin: 10px 0px;
+    }
+    #weather-forecasts .forecasts {
+        width: 100%;
+    }
+    #weather-forecasts .forecasts .forecast-content-wrappers {
+        width: 120px;
+    }
+    #weather-forecasts .forecast-picto {
+        width: 20px; 
+        height: 20px;
+        position: relative;
+        bottom: -4px;
+    }
+    #weather-forecasts .forcasts-dates {
+        display: inline;
+        margin: 0px 5px;
+    }
+    #weather-forecasts .forcasts-full-dates {
+        display: none;
+    }
+}
+
