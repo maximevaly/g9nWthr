@@ -31,7 +31,8 @@
     //--><!]]></style>
     
     <meta charset="utf-8" />
-
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
     <title>g9nWthr</title>
   	
     <link href="http://fonts.googleapis.com/css?family=Kreon" rel="stylesheet" type="text/css">
@@ -78,7 +79,7 @@
                 window.addEventListener ? window.addEventListener('resize', displayWindowSize, false) : window.attachEvent('onresize', displayWindowSize);
             };
             
-            //window.addEventListener ? window.addEventListener('load', init, false) : window.attachEvent('onload', init);
+            window.addEventListener ? window.addEventListener('load', init, false) : window.attachEvent('onload', init);
         }(window, document));
     </script>
   </head>
@@ -99,7 +100,7 @@
           
       <div id="weather">
       </div>
-	    
+    
       <noscript>
         <div id="no-script">Damn! We can't do nothing nowadays without JavaScript mam'!</div>
       </noscript>
@@ -114,7 +115,6 @@
             <span id="github-text">Fork me on github!</span>
         </a>
     </div>
-    
     
     <script type="text/javascript" src="wthr.js"></script>
 

@@ -161,7 +161,7 @@ div.clear {
 @media (max-width: 330px) {
     /*body { background-color: #FF7A46; }*/
     #weather-today {
-        margin-bottom: -80px;
+        /*margin-bottom: -80px;*/
     }
     #weather-today a {
         display: block;
@@ -172,19 +172,20 @@ div.clear {
     }
     #weather-forecasts {
         float: none;
-        margin: 10px 0px;
+        margin: -60px 0px 10px;
     }
     #weather-forecasts .forecasts {
         width: 100%;
     }
     #weather-forecasts .forecasts .forecast-content-wrappers {
-        width: 120px;
+        width: 130px;
     }
     #weather-forecasts .forecast-picto {
         width: 20px; 
         height: 20px;
         position: relative;
         bottom: -4px;
+        background-color: #ff0000;
     }
     #weather-forecasts .forcasts-dates {
         display: inline;
@@ -192,6 +193,8 @@ div.clear {
     }
     #weather-forecasts .forcasts-full-dates {
         display: none;
+    }
+    #fromflickr {
     }
 }
 
