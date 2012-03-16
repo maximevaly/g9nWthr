@@ -185,7 +185,6 @@ div.clear {
         height: 20px;
         position: relative;
         bottom: -4px;
-        background-color: #ff0000;
     }
     #weather-forecasts .forcasts-dates {
         display: inline;
